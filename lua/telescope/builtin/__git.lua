@@ -454,7 +454,9 @@ local try_worktrees = function(opts)
     end
   end
 
-  error(opts.cwd .. " is not a git directory")
+  local cwd = opts.cwd
+  opts.cwd = nil
+  return cwd
 end
 
 local current_path_toplevel = function()
@@ -474,7 +476,9 @@ local set_opts_cwd = function(opts)
     if not opts.cwd then
       opts.cwd = vim.fn.expand "%:p:h"
       try_worktrees(opts)
-      return
+      if not opts.cwd then
+        opts.cwd = vim.loop.cwd()
+      end
     end
   else
     opts.cwd = vim.loop.cwd()
@@ -487,7 +491,10 @@ local set_opts_cwd = function(opts)
     local in_bare = utils.get_os_command_output({ "git", "rev-parse", "--is-bare-repository" }, opts.cwd)
 
     if in_worktree[1] ~= "true" and in_bare[1] ~= "true" then
-      try_worktrees(opts)
+      local cwd = try_worktrees(opts)
+      if not opts.cwd then
+        error(cwd .. " is not a git directory")
+      end
     elseif in_worktree[1] ~= "true" and in_bare[1] == "true" then
       opts.is_bare = true
     end
